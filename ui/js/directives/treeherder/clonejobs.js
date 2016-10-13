@@ -904,6 +904,7 @@ treeherder.directive('thCloneJobs', [
                           rsMap[resultSetId].rs_obj
                         )).then(function() {
                             $rootScope.jobsReady = true;
+                            scope.$parent.allJobsHidden = $scope.allJobsHidden;
                         });
                     }
                 });
@@ -944,6 +945,7 @@ treeherder.directive('thCloneJobs', [
             var waitSpanEl = $(tableEl).prev();
             $(waitSpanEl).css('display', 'none');
             var tableHtml = "";
+            var allJobsHidden = true;
             resultset.platforms.forEach(function(platform) {
                 var platformId = thAggregateIds.getPlatformRowId(
                     $rootScope.repoName,
@@ -956,6 +958,7 @@ treeherder.directive('thCloneJobs', [
                 var anyVisible = _.some(platform.groups, function(jobGroup) {
                     return _.some(jobGroup.jobs, {visible: true});
                 });
+                if (allJobsHidden && anyVisible) allJobsHidden = false;
                 var display_style = anyVisible ? "table-row" : "none";
                 var rowHtml = '<tr id="' + platformId + '" style="display: ' + display_style + ';">';
                 //Add platforms
@@ -973,6 +976,8 @@ treeherder.directive('thCloneJobs', [
                 tableHtml += rowHtml;
             });
             tableEl.html(tableHtml);
+            $scope.allJobsHidden = allJobsHidden;
+            $scope.$parent.allJobsHidden = allJobsHidden;
         };
 
         var $scope = null;
