@@ -6,13 +6,13 @@ treeherder.directive('thCloneJobs', [
     'thServiceDomain', 'thResultStatusInfo', 'thEvents', 'thAggregateIds',
     'thJobFilters', 'thResultStatusObject', 'ThResultSetStore',
     'ThJobModel', 'linkifyBugsFilter', 'thResultStatus', 'thPlatformName',
-    'thNotify', '$timeout',
+    'thNotify', '$timeout', '$compile',
     function(
         $rootScope, $http, ThLog, thUrl, thCloneHtml,
         thServiceDomain, thResultStatusInfo, thEvents, thAggregateIds,
         thJobFilters, thResultStatusObject, ThResultSetStore,
         ThJobModel, linkifyBugsFilter, thResultStatus, thPlatformName,
-        thNotify, $timeout){
+        thNotify, $timeout, $compile){
 
         var $log = new ThLog("thCloneJobs");
 
@@ -36,8 +36,6 @@ treeherder.directive('thCloneJobs', [
         var jobKeyAttr = 'data-jmkey';
         var runnableJobBuildernameAttr = 'data-buildername';
         var groupKeyAttr = 'data-grkey';
-
-        var tableInterpolator = thCloneHtml.get('resultsetClone').interpolator;
 
         //Retrieve platform interpolator
         var platformInterpolator = thCloneHtml.get('platformClone').interpolator;
@@ -428,57 +426,6 @@ treeherder.directive('thCloneJobs', [
 
             } else {
                 _.bind(clickGroupCb, this, el)();
-            }
-        };
-
-        var addRevisions = function(resultset, element){
-
-            if(resultset.revisions.length > 0){
-
-                var revisionInterpolator = thCloneHtml.get('revisionsClone').interpolator;
-
-                var ulEl = element.find('ul');
-
-                //make sure we're starting with an empty element
-                $(ulEl).empty();
-
-                var revision, revisionHtml, userTokens, i;
-
-                for (i=0; i<resultset.revisions.length; i++) {
-
-                    revision = resultset.revisions[i];
-
-                    revision.urlBasePath = $rootScope.urlBasePath;
-                    revision.currentRepo = $rootScope.currentRepo;
-
-                    userTokens = revision.author.split(/[<>]+/);
-                    if (userTokens.length > 1) {
-                        revision.email = userTokens[1];
-                    }
-                    revision.name = userTokens[0].trim();
-                    // Only use the first line of the full commit message.
-                    revision.escaped_comment = _.escape(revision.comments.split('\n')[0]);
-                    revision.escaped_comment_linkified = linkifyBugsFilter(revision.escaped_comment);
-
-                    // Parse the comment so we can tag things like backouts
-                    var tags = "";
-                    if(revision.escaped_comment.search("Backed out") >= 0 ||
-                       revision.escaped_comment.search("Back out") >= 0) {
-                        tags += "backout ";
-                    }
-                    revision.comment_tags = tags.trim();
-
-                    revisionHtml = revisionInterpolator(revision);
-                    ulEl.append(revisionHtml);
-                }
-                if (resultset.revision_count > resultset.revisions.length) {
-
-                    var pushlogInterpolator = thCloneHtml.get('pushlogRevisionsClone').interpolator;
-                    ulEl.append(pushlogInterpolator({
-                        currentRepo: $rootScope.currentRepo,
-                        revision: resultset.revision
-                    }));
-                }
             }
         };
 
@@ -992,18 +939,20 @@ treeherder.directive('thCloneJobs', [
 
             registerCustomEventCallbacks(scope, element);
 
-            //Clone the target html
             var resultsetAggregateId = thAggregateIds.getResultsetTableId(
                 $rootScope.repoName, scope.resultset.id, scope.resultset.revision
             );
 
-            var targetEl = $(
-                tableInterpolator({ aggregateId:resultsetAggregateId })
-            );
+            // Build the react component for the revision list;
+            // If this weren't inside a cloned element, we could just put this in the markup instead of doing it programmatically
+            // Note: Passing props doesn't work here unless their names are all lowercase
+            _.extend(scope, {
+                repo: $rootScope.currentRepo,
+                aggregateid: resultsetAggregateId
+            });
+            var revisionEl = $compile('<revisions resultset="resultset" repo="repo" aggregateid="aggregateid"></revisions>')(scope);
 
-            addRevisions(scope.resultset, targetEl);
-
-            element.append(targetEl);
+            element.append(revisionEl);
 
             if (scope.resultset.platforms !== undefined) {
                 scope.resultset.platforms.forEach(function(platform) {
