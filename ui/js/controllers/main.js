@@ -587,8 +587,9 @@ treeherderApp.controller('MainCtrl', [
         };
 
         // query parameters that will be shown in activefiltersbar when set
-        $scope.activeFiltersBarProperties = ['fromchange', 'tochange', 'author',
-                                             'nojobs', 'startdate', 'enddate'];
+        $scope.activeFiltersBarProperties = [
+            'fromchange', 'tochange', 'author', 'nojobs', 'startdate', 'enddate'
+        ];
 
         $scope.showActiveFiltersBar = function() {
             return $scope.search().fromchange || $scope.search().tochange ||
